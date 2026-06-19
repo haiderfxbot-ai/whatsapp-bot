@@ -1,14 +1,13 @@
 {
   "name": "nexus-whatsapp-bot",
   "version": "1.0.0",
-  "description": "WhatsApp Bot integrated with Gemini AI and Pairing Code",
+  "description": "Official WhatsApp and Gemini AI Bot",
   "main": "index.js",
   "scripts": {
     "start": "node index.js"
   },
   "dependencies": {
     "whatsapp-web.js": "^1.26.0",
-    "express": "^4.19.2",
-    "@google/generative-ai": "^0.11.0"
+    "express": "^4.19.2"
   }
 }

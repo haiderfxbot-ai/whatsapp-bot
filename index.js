@@ -1,36 +1,53 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
 const express = require('express');
+const { default: makeWASocket, useMultiFileAuthState } = require('baileys');
 
 const app = express();
-const port = process.env.PORT || 3000;
-app.get('/', (req, res) => res.send('WhatsApp Server Active'));
-app.listen(port);
+const port = process.env.PORT || 5000; // Complete secure non-conflicting port
 
-const client = new Client({
-    authStrategy: new LocalAuth(),
-    puppeteer: {
-        headless: true,
-        args: ['--no-sandbox', '--disable-setuid-sandbox']
+app.get('/', (req, res) => {
+    res.send('<h1>WhatsApp Stable Bot Core is Live!</h1>');
+});
+
+app.listen(port, () => {
+    console.log(`[SERVER] Listening perfectly on port ${port}`);
+});
+
+async function connectToWhatsApp() {
+    const { state, saveCreds } = await useMultiFileAuthState('auth_session');
+    
+    const sock = makeWASocket({
+        auth: state,
+        printQRInTerminal: false // We explicitly disable QR to force text pairing code
+    });
+
+    sock.ev.on('creds.update', saveCreds);
+
+    if (!sock.authState.creds.registered) {
+        setTimeout(async () => {
+            try {
+                const myPhoneNumber = "923079536857";
+                console.log(`\n[SYSTEM] Requesting official pairing code for: ${myPhoneNumber}`);
+                
+                const code = await sock.requestPairingCode(myPhoneNumber);
+                
+                console.log('\n==================================================');
+                console.log(`👉 SUCCESS! YOUR WHATSAPP PAIRING CODE IS: ${code} 👈`);
+                console.log('==================================================\n');
+            } catch (error) {
+                console.error('Pairing registration failed:', error);
+            }
+        }, 3000);
     }
-});
 
-// This is the REAL and OFFICIAL way to get the 8-character pairing code in terminal
-client.on('qr', async (qr) => {
-    console.log('\n[SYSTEM] Requesting official 8-character pairing code from WhatsApp...');
-    try {
-        const myPhoneNumber = '923079536857'; 
-        const pairingCode = await client.requestPairingCode(myPhoneNumber);
-        
-        console.log('\n==================================================');
-        console.log(`👉 SUCCESS! YOUR WHATSAPP PAIRING CODE IS: ${pairingCode} 👈`);
-        console.log('==================================================\n');
-    } catch (err) {
-        console.error('Error fetching pairing code:', err);
-    }
-});
+    sock.ev.on('connection.update', (update) => {
+        const { connection } = update;
+        if (connection === 'close') {
+            console.log('[SYSTEM] Connection closed, restarting...');
+            connectToWhatsApp();
+        } else if (connection === 'open') {
+            console.log('\n[SUCCESS] WhatsApp Bot is successfully authenticated and active!');
+        }
+    });
+}
 
-client.on('ready', () => {
-    console.log('\n[SUCCESS] WhatsApp Bot is paired and ready!');
-});
-
-client.initialize().catch(err => console.error('Initialization error:', err));
+connectToWhatsApp().catch(err => console.error('Main engine failure:', err));

@@ -1,4 +1,4 @@
-const { Client, LocalAuth } = require('whatsapp-web.js');
+const { Client, RemoteAuth } = require('whatsapp-web.js');
 const qrcode = require('qrcode-terminal');
 const { GoogleGenAI } = require('@google/generative-ai');
 const express = require('express');
@@ -6,55 +6,50 @@ const express = require('express');
 const app = express();
 const port = process.env.PORT || 3000;
 
-// Express server to keep Render service alive
 app.get('/', (req, res) => {
-    res.send('WhatsApp Bot is running perfectly!');
+    res.send('WhatsApp Bot Server is Active!');
 });
 
 app.listen(port, () => {
-    console.log(`Server is listening on port ${port}`);
+    console.log(`Server is running on port ${port}`);
 });
 
-// Initialize WhatsApp Client with specific arguments for Render/Linux environment
+// We connect to a public WebSocket browser connection to completely bypass Render's local environment limitations
 const client = new Client({
-    authStrategy: new LocalAuth(),
     puppeteer: {
+        browserWSEndpoint: 'wss://chrome.browserless.io/',
         headless: true,
         args: [
             '--no-sandbox',
             '--disable-setuid-sandbox',
-            '--disable-dev-shm-usage',
-            '--disable-accelerated-2d-canvas',
-            '--no-first-run',
-            '--no-zygote',
-            '--single-process',
-            '--disable-gpu'
+            '--disable-dev-shm-usage'
         ]
     }
 });
 
-// Generate QR Code in terminal for scanning
 client.on('qr', (qr) => {
-    console.log('SCAN THIS QR CODE WITH WHATSAPP:');
+    console.log('=== QR CODE START ===');
+    console.log('Scan the QR code below via WhatsApp Web:');
     qrcode.generate(qr, { small: true });
+    console.log('=== QR CODE END ===');
 });
 
 client.on('ready', () => {
-    console.log('WhatsApp Client is ready and connected!');
+    console.log('Success: WhatsApp Client is successfully connected!');
 });
 
-// Handle incoming messages
 client.on('message', async (msg) => {
     if (msg.body.startsWith('!ai ')) {
         const userPrompt = msg.body.slice(4);
         try {
-            // Placeholder for Gemini AI integration
-            msg.reply(`Received prompt for Gemini: ${userPrompt}`);
+            msg.reply(`Gemini Response Placeholder for: ${userPrompt}`);
         } catch (error) {
             console.error(error);
-            msg.reply('Sorry, something went wrong with AI response.');
+            msg.reply('Error connecting to AI system.');
         }
     }
 });
 
-client.initialize();
+client.initialize().catch(err => {
+    console.error('Initialization error details:', err);
+});
